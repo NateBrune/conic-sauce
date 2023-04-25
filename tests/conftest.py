@@ -1,7 +1,15 @@
 import pytest
 from brownie import config
-from brownie import Contract
+from brownie import Contract, project, interface
 
+USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+bitDAO = "0x78605Df79524164911C144801f41e9811B7DB73D"
+CONFIG = {
+    'CONICUSDC': {
+        'token': USDC,
+        'whale': bitDAO,
+    }
+}
 
 @pytest.fixture
 def gov(accounts):
@@ -39,17 +47,16 @@ def keeper(accounts):
 
 
 @pytest.fixture
-def token():
-    token_address = "0x6b175474e89094c44da98b954eedeac495271d0f"  # this should be the address of the ERC-20 used by the strategy/vault (DAI)
-    yield Contract(token_address)
+def token(conf):
+    yield interface.IERC20Metadata(conf['token'])
 
 
 @pytest.fixture
-def amount(accounts, token, user):
+def amount(accounts, token, user, conf):
     amount = 10_000 * 10 ** token.decimals()
     # In order to get some funds for the token you are about to use,
     # it impersonate an exchange address to use it's funds.
-    reserve = accounts.at("0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643", force=True)
+    reserve = accounts.at(conf['whale'], force=True)
     token.transfer(user, amount, {"from": reserve})
     yield amount
 
@@ -76,10 +83,17 @@ def vault(pm, gov, rewards, guardian, management, token):
     vault.setManagement(management, {"from": gov})
     yield vault
 
+@pytest.fixture
+def strategy_contract():
+    yield  project.ConicSauceProject.CONICUSDC
 
 @pytest.fixture
-def strategy(strategist, keeper, vault, Strategy, gov):
-    strategy = strategist.deploy(Strategy, vault)
+def conf(strategy_contract):
+    yield CONFIG[strategy_contract._name]
+
+@pytest.fixture
+def strategy(strategist, strategy_contract, keeper, vault, gov):
+    strategy = strategist.deploy(strategy_contract, vault)
     strategy.setKeeper(keeper)
     vault.addStrategy(strategy, 10_000, 0, 2**256 - 1, 1_000, {"from": gov})
     yield strategy

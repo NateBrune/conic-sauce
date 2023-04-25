@@ -4,7 +4,7 @@ import pytest
 
 
 def test_operation(
-    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX
+    chain, accounts, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX, gov
 ):
     # Deposit to the vault
     user_balance_before = token.balanceOf(user)
@@ -14,9 +14,10 @@ def test_operation(
 
     # harvest
     chain.sleep(1)
+    assert 1==2
     strategy.harvest()
     assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
-
+    
     # tend()
     strategy.tend()
 
