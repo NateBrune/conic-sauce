@@ -8,9 +8,10 @@ pragma experimental ABIEncoderV2;
 import {BaseStrategy, StrategyParams} from "@yearnvaults/contracts/BaseStrategy.sol";
 import {SafeERC20, IERC20, Address} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "./interfaces/IConicPool.sol";
-import "./interfaces/ILpTokenStaker.sol";
-import "./interfaces/IRewardManager.sol";
+import "interfaces/IConicPool.sol";
+import "interfaces/ILpTokenStaker.sol";
+import "interfaces/IRewardManager.sol";
+import "interfaces/ICurveFi.sol";
 
 struct CoreStrategyConicConfig {
     /*****************************/
@@ -37,6 +38,9 @@ contract CoreStrategyConic is BaseStrategy {
     IERC20 public constant CNC = IERC20(0x9aE380F0272E2162340a5bB646c354271c0F5cFC);
     IRewardManager public rewardsManager = IRewardManager(0xE976F643d4dc08Aa3CeD55b0CA391B1d11328347);
     ILpTokenStaker public lpTokenStaker = ILpTokenStaker(0xeC037423A61B634BFc490dcc215236349999ca3d);
+    ICurveFi public cncPool = ICurveFi(0x838af967537350D2C44ABB8c010E49E32673ab94);
+    ICurveFi public cvxPool = ICurveFi(0xB576491F1E6e5E62f1d8F26062Ee822B40B0E0d4); 
+    ICurveFi public crvPool = ICurveFi(0x8301AE4fc9c624d1D396cbDAa1ed877821D7C511);
     IConicPool public conicPool;
     ILpToken public conicLp;
     //address public router;
@@ -55,7 +59,8 @@ contract CoreStrategyConic is BaseStrategy {
     }
 
     function _setup() internal virtual{}
-    function claimHarvest() internal virtual{}
+    // TODO: INTERNAL
+    function claimHarvest() public virtual{}
     //function _withdraw(uint256 _amount) internal virtual{}
     //TODO: MAKE THESE BAD BOYS INTERNAL
     function _withdraw(uint256 _amount) public virtual returns (uint256 _liquidatedAmount, uint256 _loss){}
@@ -138,17 +143,13 @@ contract CoreStrategyConic is BaseStrategy {
         // TODO: Do something to invest excess `want` tokens (from the Vault) into your positions
         // NOTE: Try to adjust positions so that `_debtOutstanding` can be freed up on *next* harvest (not immediately)
         uint256 _wantAvailable = balanceOfWant();
-        emit debug2(_wantAvailable);
-        emit debug2(_debtOutstanding);
         if (_debtOutstanding >= _wantAvailable) {
             return;
         }
         uint256 toInvest = _wantAvailable.sub(_debtOutstanding);
-        emit debug2(toInvest);
 
         if(toInvest > 0) {
-            //_deposit(toInvest);
-            //conicPool.depositFor(address(this), toInvest, 0, true);
+            _deposit(toInvest);
         }
     }
 
